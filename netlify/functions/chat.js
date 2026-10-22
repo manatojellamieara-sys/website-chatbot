@@ -44,6 +44,15 @@ exports.handler = async (event) => {
       };
     }
 
+    if (!process.env.GEMINI_API_KEY) {
+      return {
+        statusCode: 200,
+        body: JSON.stringify({
+          reply: "Error: GEMINI_API_KEY is missing in Netlify environment variables.",
+        }),
+      };
+    }
+
     const baseUrl = `https://${event.headers.host}`;
     const siteText = await getSiteText(baseUrl);
 
@@ -72,15 +81,30 @@ ${siteText}`;
     );
 
     const data = await res.json();
+
+    const text = (data?.candidates?.[0]?.content?.parts || [])
+      .map((p) => p.text || "")
+      .join("")
+      .trim();
+
     const reply =
-      data?.candidates?.[0]?.content?.parts?.[0]?.text ||
-      "Sorry, I can't answer right now. Please try again later.";
+      text ||
+      "Error (" +
+        MODEL +
+        "): " +
+        (data?.error?.message ||
+          data?.promptFeedback?.blockReason ||
+          data?.candidates?.[0]?.finishReason ||
+          JSON.stringify(data)
+        )
+          .toString()
+          .slice(0, 300);
 
     return { statusCode: 200, body: JSON.stringify({ reply }) };
   } catch (err) {
     return {
       statusCode: 500,
-      body: JSON.stringify({ reply: "Something went wrong. Please try again." }),
+      body: JSON.stringify({ reply: "Error: " + String(err.message || err).slice(0, 200) }),
     };
   }
 };
