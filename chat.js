@@ -1,15 +1,35 @@
-const SYSTEM = `You are the assistant on Jella Mieara D. Manato's portfolio website.
-Answer only questions about Jella and this website, using the info below.
-If the answer isn't in the info, say you don't know and suggest the Contact page.
-Keep answers short and friendly.
-
-INFO:
-- Jella is a 4th-year BSIT student and student-athlete, and an aspiring data analyst.
-- Skills: Basic HTML, Basic CSS, Java, Basic SQL, UI/UX, Responsible, Adaptability, Creativity.
-- Pages: Home, About Me, Skills, Projects, Contact.
-- (Add more details about Jella here.)`;
-
 const MODEL = process.env.GEMINI_MODEL || "gemini-flash-latest";
+const PAGES = ["index", "about", "skills", "projects", "contact"];
+
+let cache = { text: "", time: 0 };
+
+function toText(html) {
+  return html
+    .replace(/<script[\s\S]*?<\/script>/gi, "")
+    .replace(/<style[\s\S]*?<\/style>/gi, "")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+async function getSiteText(baseUrl) {
+  if (cache.text && Date.now() - cache.time < 10 * 60 * 1000) return cache.text;
+  const parts = await Promise.all(
+    PAGES.map(async (p) => {
+      try {
+        const r = await fetch(`${baseUrl}/${p}.html`);
+        if (!r.ok) return "";
+        return `[${p.toUpperCase()} PAGE]\n${toText(await r.text())}`;
+      } catch {
+        return "";
+      }
+    })
+  );
+  cache = { text: parts.filter(Boolean).join("\n\n"), time: Date.now() };
+  return cache.text;
+}
 
 exports.handler = async (event) => {
   if (event.httpMethod !== "POST") {
@@ -24,6 +44,18 @@ exports.handler = async (event) => {
       };
     }
 
+    const baseUrl = `https://${event.headers.host}`;
+    const siteText = await getSiteText(baseUrl);
+
+    const system = `You are the assistant on Jella Mieara D. Manato's portfolio website.
+Answer questions using ONLY the website content below.
+If the answer is not in the content, say you don't know and suggest the Contact page.
+Never make up details such as age, address, or grades.
+Keep answers short and friendly.
+
+WEBSITE CONTENT:
+${siteText}`;
+
     const res = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`,
       {
@@ -33,10 +65,10 @@ exports.handler = async (event) => {
           "x-goog-api-key": process.env.GEMINI_API_KEY,
         },
         body: JSON.stringify({
-          systemInstruction: { parts: [{ text: SYSTEM }] },
+          systemInstruction: { parts: [{ text: system }] },
           contents: [{ role: "user", parts: [{ text: message }] }],
         }),
-      },
+      }
     );
 
     const data = await res.json();
@@ -48,9 +80,7 @@ exports.handler = async (event) => {
   } catch (err) {
     return {
       statusCode: 500,
-      body: JSON.stringify({
-        reply: "Something went wrong. Please try again.",
-      }),
+      body: JSON.stringify({ reply: "Something went wrong. Please try again." }),
     };
   }
 };
