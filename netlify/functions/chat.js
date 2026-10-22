@@ -1,7 +1,7 @@
 const PRIMARY = process.env.GEMINI_MODEL || "gemini-flash-latest";
 const MODELS = [
-  ...new Set([PRIMARY, "gemini-flash-latest", "gemini-flash-lite-latest"]),
-];
+  ...new Set([PRIMARY, "gemini-flash-lite-latest"]),
+].slice(0, 2);
 const PAGES = ["index", "about", "skills", "projects", "contact"];
 
 let cache = { text: "", time: 0 };
@@ -17,12 +17,20 @@ function toText(html) {
     .trim();
 }
 
+function fetchWithTimeout(url, options, ms) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), ms);
+  return fetch(url, { ...options, signal: controller.signal }).finally(() =>
+    clearTimeout(timer)
+  );
+}
+
 async function getSiteText(baseUrl) {
   if (cache.text && Date.now() - cache.time < 10 * 60 * 1000) return cache.text;
   const parts = await Promise.all(
     PAGES.map(async (p) => {
       try {
-        const r = await fetch(`${baseUrl}/${p}.html`);
+        const r = await fetchWithTimeout(`${baseUrl}/${p}.html`, {}, 2000);
         if (!r.ok) return "";
         return `[${p.toUpperCase()} PAGE]\n${toText(await r.text())}`;
       } catch {
@@ -30,12 +38,13 @@ async function getSiteText(baseUrl) {
       }
     })
   );
-  cache = { text: parts.filter(Boolean).join("\n\n"), time: Date.now() };
-  return cache.text;
+  const text = parts.filter(Boolean).join("\n\n");
+  if (text) cache = { text, time: Date.now() };
+  return text;
 }
 
 async function askGemini(model, system, message) {
-  const res = await fetch(
+  const res = await fetchWithTimeout(
     `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
     {
       method: "POST",
@@ -47,7 +56,8 @@ async function askGemini(model, system, message) {
         systemInstruction: { parts: [{ text: system }] },
         contents: [{ role: "user", parts: [{ text: message }] }],
       }),
-    }
+    },
+    4000
   );
   const data = await res.json();
   const text = (data?.candidates?.[0]?.content?.parts || [])
@@ -97,7 +107,7 @@ ${siteText}`;
         if (text) {
           return { statusCode: 200, body: JSON.stringify({ reply: text }) };
         }
-        console.log(`Model ${model} failed: ${error}`);
+        console.log(`Model ${model} returned no text: ${error}`);
       } catch (e) {
         console.log(`Model ${model} error: ${e.message}`);
       }
@@ -110,8 +120,9 @@ ${siteText}`;
       }),
     };
   } catch (err) {
+    console.log("Handler error:", err.message);
     return {
-      statusCode: 500,
+      statusCode: 200,
       body: JSON.stringify({ reply: "Something went wrong. Please try again." }),
     };
   }
