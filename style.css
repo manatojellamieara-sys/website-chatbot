@@ -743,3 +743,39 @@ footer {
     gap: 10px;
   }
 }
+
+@media (max-width: 800px) {
+  .about-top-row {
+    flex-direction: column;
+    gap: 40px;
+  }
+  .about-image,
+  .about-card,
+  .about-card.dark {
+    flex: none;
+    width: 100%;
+  }
+  .about-image img {
+    height: auto;
+    max-height: 520px;
+  }
+  .about-card,
+  .about-card.dark {
+    padding: 30px 22px;
+  }
+  .about-card.dark {
+    text-align: left;
+  }
+  .info strong {
+    white-space: normal;
+  }
+  .next-page-button {
+    position: static;
+    margin: 30px auto 0;
+    transform: none;
+  }
+  .next-page-button:hover,
+  .next-page-button:focus-visible {
+    transform: none;
+  }
+}
