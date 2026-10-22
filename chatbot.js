@@ -1,7 +1,7 @@
 (function () {
   const css = `
-  #cb-btn{position:fixed;bottom:20px;right:20px;width:56px;height:56px;border-radius:50%;border:none;background:#7c3aed;color:#fff;font-size:24px;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,.3);z-index:9999}
-  #cb-box{position:fixed;bottom:90px;right:20px;width:320px;max-width:calc(100vw - 40px);height:420px;background:#fff;border-radius:14px;box-shadow:0 8px 24px rgba(0,0,0,.25);display:none;flex-direction:column;overflow:hidden;z-index:9999;font-family:Quicksand,sans-serif}
+  #cb-btn{position:fixed;bottom:80px;right:20px;width:56px;height:56px;border-radius:50%;border:none;background:#7c3aed;color:#fff;font-size:24px;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,.3);z-index:9999}
+ #cb-box{position:fixed;bottom:150px;right:20px;width:320px;max-width:calc(100vw - 40px);height:420px;background:#fff;border-radius:14px;box-shadow:0 8px 24px rgba(0,0,0,.25);display:none;flex-direction:column;overflow:hidden;z-index:9999;font-family:Quicksand,sans-serif}
   #cb-head{background:#7c3aed;color:#fff;padding:12px 14px;font-weight:700}
   #cb-msgs{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:8px;background:#f8f7fc}
   .cb-m{padding:8px 12px;border-radius:12px;max-width:85%;font-size:14px;line-height:1.4;color:#222}
