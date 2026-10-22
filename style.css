@@ -284,27 +284,68 @@ body {
   gap: 30px;
   align-items: stretch;
 }
+
+/* PHOTO */
 .about-image {
+  position: relative;
   flex: 1;
-  overflow: hidden;
-  border-radius: 30px;
-  background: var(--cream-alt);
-  box-shadow: 0 25px 60px rgba(58, 53, 50, 0.16);
-  transform: rotate(-1deg);
-  transition:
-    transform 0.4s ease,
-    box-shadow 0.4s ease;
+  overflow: visible;
+  background: transparent;
+  border-radius: 0;
+  box-shadow: none;
+  transform: none;
 }
-.about-image:hover {
-  transform: rotate(0deg) translateY(-6px);
-  box-shadow: 0 30px 70px rgba(58, 53, 50, 0.22);
+.about-image::before {
+  content: "";
+  position: absolute;
+  inset: 18px -18px -18px 18px;
+  border: 2px solid var(--rose);
+  border-radius: 200px 200px 32px 32px;
+  z-index: 0;
+  transition: inset 0.4s ease;
+}
+.about-image::after {
+  content: "";
+  position: absolute;
+  top: -18px;
+  left: -18px;
+  width: 110px;
+  height: 110px;
+  background: var(--peach);
+  border-radius: 50%;
+  opacity: 0.6;
+  z-index: 0;
 }
 .about-image img {
+  position: relative;
+  z-index: 1;
   width: 100%;
   height: 100%;
   display: block;
   object-fit: cover;
+  object-position: center top;
+  border: 6px solid var(--white);
+  border-radius: 200px 200px 32px 32px;
+  box-shadow: 0 25px 60px rgba(58, 53, 50, 0.2);
+  transition: transform 0.4s ease;
 }
+.about-image:hover img {
+  transform: translateY(-6px);
+}
+.about-image:hover::before {
+  inset: 12px -12px -12px 12px;
+}
+@media (max-width: 800px) {
+  .about-image img {
+    border-radius: 160px 160px 28px 28px;
+  }
+  .about-image::before {
+    inset: 12px -10px -12px 12px;
+    border-radius: 160px 160px 28px 28px;
+  }
+}
+
+/* CARDS */
 .about-card {
   flex: 1;
   padding: 45px 40px;
@@ -370,7 +411,6 @@ body {
   font-family: "Quicksand", "Helvetica Neue", "Segoe UI", Arial, sans-serif;
   font-weight: 500;
 }
-
 /*SKILLS*/
 .skills-grid {
   display: flex;
