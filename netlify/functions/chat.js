@@ -1,4 +1,7 @@
-const MODEL = process.env.GEMINI_MODEL || "gemini-flash-latest";
+const PRIMARY = process.env.GEMINI_MODEL || "gemini-flash-latest";
+const MODELS = [
+  ...new Set([PRIMARY, "gemini-flash-latest", "gemini-flash-lite-latest"]),
+];
 const PAGES = ["index", "about", "skills", "projects", "contact"];
 
 let cache = { text: "", time: 0 };
@@ -29,6 +32,29 @@ async function getSiteText(baseUrl) {
   );
   cache = { text: parts.filter(Boolean).join("\n\n"), time: Date.now() };
   return cache.text;
+}
+
+async function askGemini(model, system, message) {
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-goog-api-key": process.env.GEMINI_API_KEY,
+      },
+      body: JSON.stringify({
+        systemInstruction: { parts: [{ text: system }] },
+        contents: [{ role: "user", parts: [{ text: message }] }],
+      }),
+    }
+  );
+  const data = await res.json();
+  const text = (data?.candidates?.[0]?.content?.parts || [])
+    .map((p) => p.text || "")
+    .join("")
+    .trim();
+  return { text, error: data?.error?.message || "" };
 }
 
 exports.handler = async (event) => {
@@ -65,46 +91,28 @@ Keep answers short and friendly.
 WEBSITE CONTENT:
 ${siteText}`;
 
-    const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-goog-api-key": process.env.GEMINI_API_KEY,
-        },
-        body: JSON.stringify({
-          systemInstruction: { parts: [{ text: system }] },
-          contents: [{ role: "user", parts: [{ text: message }] }],
-        }),
+    for (const model of MODELS) {
+      try {
+        const { text, error } = await askGemini(model, system, message);
+        if (text) {
+          return { statusCode: 200, body: JSON.stringify({ reply: text }) };
+        }
+        console.log(`Model ${model} failed: ${error}`);
+      } catch (e) {
+        console.log(`Model ${model} error: ${e.message}`);
       }
-    );
+    }
 
-    const data = await res.json();
-
-    const text = (data?.candidates?.[0]?.content?.parts || [])
-      .map((p) => p.text || "")
-      .join("")
-      .trim();
-
-    const reply =
-      text ||
-      "Error (" +
-        MODEL +
-        "): " +
-        (data?.error?.message ||
-          data?.promptFeedback?.blockReason ||
-          data?.candidates?.[0]?.finishReason ||
-          JSON.stringify(data)
-        )
-          .toString()
-          .slice(0, 300);
-
-    return { statusCode: 200, body: JSON.stringify({ reply }) };
+    return {
+      statusCode: 200,
+      body: JSON.stringify({
+        reply: "The AI is very busy right now. Please try again in a minute.",
+      }),
+    };
   } catch (err) {
     return {
       statusCode: 500,
-      body: JSON.stringify({ reply: "Error: " + String(err.message || err).slice(0, 200) }),
+      body: JSON.stringify({ reply: "Something went wrong. Please try again." }),
     };
   }
 };
