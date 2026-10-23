@@ -57,7 +57,7 @@ async function askGemini(model, system, message) {
         contents: [{ role: "user", parts: [{ text: message }] }],
       }),
     },
-    4000
+    7000
   );
   const data = await res.json();
   const text = (data?.candidates?.[0]?.content?.parts || [])
